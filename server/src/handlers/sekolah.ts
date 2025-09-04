@@ -1,12 +1,12 @@
+import { db } from '../db';
+import { sekolahTable } from '../db/schema';
 import { type CreateSekolahInput, type Sekolah } from '../schema';
 
 export async function createSekolah(input: CreateSekolahInput): Promise<Sekolah> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to create new school data entry
-    // Should insert school information into sekolah table
-    
-    return Promise.resolve({
-        id: Math.floor(Math.random() * 1000),
+  try {
+    // Insert sekolah record
+    const result = await db.insert(sekolahTable)
+      .values({
         nama_sekolah: input.nama_sekolah,
         npsn: input.npsn,
         jenjang: input.jenjang,
@@ -15,9 +15,18 @@ export async function createSekolah(input: CreateSekolahInput): Promise<Sekolah>
         nip_nik_kepala: input.nip_nik_kepala,
         alamat_sekolah: input.alamat_sekolah,
         nomor_telepon: input.nomor_telepon,
-        email: input.email,
-        created_at: new Date()
-    });
+        email: input.email
+      })
+      .returning()
+      .execute();
+
+    // Return the created sekolah record
+    const sekolah = result[0];
+    return sekolah;
+  } catch (error) {
+    console.error('Sekolah creation failed:', error);
+    throw error;
+  }
 }
 
 export async function getSekolah(): Promise<Sekolah[]> {

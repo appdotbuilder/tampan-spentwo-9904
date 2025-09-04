@@ -1,47 +1,109 @@
+import { db } from '../db';
+import { harapanSiswaTable, siswaTable, kelasTable, guruTable } from '../db/schema';
 import { type CreateHarapanSiswaInput, type HarapanSiswa } from '../schema';
+import { eq, desc } from 'drizzle-orm';
 
 export async function createHarapanSiswa(input: CreateHarapanSiswaInput): Promise<HarapanSiswa> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to create new student hope/aspiration entry
-    // Should insert student's hope into harapan_siswa table
-    
-    return Promise.resolve({
-        id: Math.floor(Math.random() * 1000),
+  try {
+    // Verify siswa exists
+    const siswa = await db.select()
+      .from(siswaTable)
+      .where(eq(siswaTable.id, input.siswa_id))
+      .execute();
+
+    if (siswa.length === 0) {
+      throw new Error(`Siswa with ID ${input.siswa_id} not found`);
+    }
+
+    // Insert harapan siswa record
+    const result = await db.insert(harapanSiswaTable)
+      .values({
         siswa_id: input.siswa_id,
-        isi_harapan: input.isi_harapan,
-        tanggal_harapan: new Date(),
-        created_at: new Date()
-    });
+        isi_harapan: input.isi_harapan
+      })
+      .returning()
+      .execute();
+
+    return result[0];
+  } catch (error) {
+    console.error('Create harapan siswa failed:', error);
+    throw error;
+  }
 }
 
 export async function getHarapanSiswa(): Promise<HarapanSiswa[]> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to fetch all student hopes
-    // Should return list of student hopes for wali kelas and admin to view
-    
-    return Promise.resolve([]);
+  try {
+    const results = await db.select()
+      .from(harapanSiswaTable)
+      .orderBy(desc(harapanSiswaTable.tanggal_harapan))
+      .execute();
+
+    return results;
+  } catch (error) {
+    console.error('Get all harapan siswa failed:', error);
+    throw error;
+  }
 }
 
 export async function getHarapanBySiswa(siswaId: number): Promise<HarapanSiswa[]> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to fetch hopes by specific student
-    // Should return student's hope history for personal view
-    
-    return Promise.resolve([]);
+  try {
+    const results = await db.select()
+      .from(harapanSiswaTable)
+      .where(eq(harapanSiswaTable.siswa_id, siswaId))
+      .orderBy(desc(harapanSiswaTable.tanggal_harapan))
+      .execute();
+
+    return results;
+  } catch (error) {
+    console.error('Get harapan by siswa failed:', error);
+    throw error;
+  }
 }
 
 export async function getHarapanByWaliKelas(waliKelasId: number): Promise<HarapanSiswa[]> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to fetch hopes from students under specific wali kelas
-    // Should return hopes from students in classes managed by the wali kelas
-    
-    return Promise.resolve([]);
+  try {
+    // Join harapan_siswa with siswa and kelas to get hopes from students under specific wali kelas
+    const results = await db.select({
+      id: harapanSiswaTable.id,
+      siswa_id: harapanSiswaTable.siswa_id,
+      isi_harapan: harapanSiswaTable.isi_harapan,
+      tanggal_harapan: harapanSiswaTable.tanggal_harapan,
+      created_at: harapanSiswaTable.created_at
+    })
+      .from(harapanSiswaTable)
+      .innerJoin(siswaTable, eq(harapanSiswaTable.siswa_id, siswaTable.id))
+      .innerJoin(kelasTable, eq(siswaTable.kelas_id, kelasTable.id))
+      .where(eq(kelasTable.wali_kelas_id, waliKelasId))
+      .orderBy(desc(harapanSiswaTable.tanggal_harapan))
+      .execute();
+
+    return results;
+  } catch (error) {
+    console.error('Get harapan by wali kelas failed:', error);
+    throw error;
+  }
 }
 
 export async function deleteHarapanSiswa(id: number): Promise<boolean> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to delete student hope entry
-    // Should remove hope record from database
-    
-    return Promise.resolve(true);
+  try {
+    // Check if harapan exists
+    const harapan = await db.select()
+      .from(harapanSiswaTable)
+      .where(eq(harapanSiswaTable.id, id))
+      .execute();
+
+    if (harapan.length === 0) {
+      throw new Error(`Harapan siswa with ID ${id} not found`);
+    }
+
+    // Delete the harapan
+    await db.delete(harapanSiswaTable)
+      .where(eq(harapanSiswaTable.id, id))
+      .execute();
+
+    return true;
+  } catch (error) {
+    console.error('Delete harapan siswa failed:', error);
+    throw error;
+  }
 }
